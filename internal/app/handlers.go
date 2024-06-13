@@ -3,10 +3,10 @@ package app
 import (
 	"encoding/json"
 	"errors"
+	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"os"
-	"strings"
 )
 
 type UrlShrinkerUnwrapper interface {
@@ -18,49 +18,43 @@ type UrlHandler struct {
 	Storage UrlShrinkerUnwrapper
 }
 
-func (h *UrlHandler) RequestHandler(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodPost:
-		h.ShrinkUrlHandler(w, r)
-	case http.MethodGet:
-		h.UnwrapUrlHandler(w, r)
-	default:
-		http.Error(w, "Method not allowed", http.StatusBadRequest) //FIXME
-	}
-}
-
-func (h *UrlHandler) ShrinkUrlHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+func (h *UrlHandler) ShrinkUrlHandler(c *gin.Context) {
+	if c.Request.URL.Path != "/" {
+		http.Error(c.Writer, "Bad request", http.StatusBadRequest)
 		return
 	}
-	body, err := io.ReadAll(r.Body)
+	body, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		http.Error(c.Writer, "Bad request", http.StatusBadRequest)
 		return
 	}
 	originalUrl := string(body[:])
 	id, _ := h.Storage.ShrinkUrl(originalUrl)
 
-	w.Header().Set("content-type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
-	_, err = w.Write([]byte("http://localhost:8080/" + id))
+	c.Writer.Header().Set("content-type", "text/plain")
+	c.Writer.WriteHeader(http.StatusCreated)
+
+	scheme := "http"
+	if c.Request.TLS != nil {
+		scheme = "https"
+	}
+	_, err = c.Writer.Write([]byte(scheme + "://" + c.Request.Host + c.Request.URL.Path + id))
 	if err != nil {
-		http.Error(w, "Bad request", http.StatusBadRequest)
+		http.Error(c.Writer, "Bad request", http.StatusBadRequest)
 		return
 	}
 
 }
 
-func (h *UrlHandler) UnwrapUrlHandler(w http.ResponseWriter, r *http.Request) {
-	id := strings.Trim(r.URL.Path, "/")
+func (h *UrlHandler) UnwrapUrlHandler(c *gin.Context) {
+	id := c.Param("id")
 	originalUrl, err := h.Storage.UnwrapUrl(id)
 	if err != nil {
-		http.Error(w, "Requested url not found", http.StatusBadRequest)
+		http.Error(c.Writer, "Requested url not found", http.StatusBadRequest)
 		return
 	}
-	w.Header().Set("Location", originalUrl)
-	w.WriteHeader(http.StatusTemporaryRedirect)
+	c.Writer.Header().Set("Location", originalUrl)
+	c.Writer.WriteHeader(http.StatusTemporaryRedirect)
 
 }
 

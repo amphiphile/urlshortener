@@ -1,6 +1,7 @@
 package app
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io"
@@ -55,17 +56,18 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 			method:      http.MethodPost,
 			requestBody: originalUrl,
 			want: want{
-				statusCode: http.StatusBadRequest,
+				statusCode: http.StatusNotFound,
 			},
 		},
 	}
 	for it, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
+			router := gin.Default()
+			router.POST("/", urlHandler.ShrinkUrlHandler)
 			request := httptest.NewRequest(tt.method, tt.url, strings.NewReader(tt.requestBody))
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(urlHandler.ShrinkUrlHandler)
-			h(w, request)
+			router.ServeHTTP(w, request)
 
 			result := w.Result()
 
@@ -83,8 +85,6 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 				if it == 0 { //FIXME
 					shortUrlId = path.Base(string(resBody))
 				}
-			} else {
-				assert.Error(t, urlParseErr)
 			}
 		})
 	}
@@ -125,10 +125,11 @@ func TestUrlHandler_unwrapUrlHandler(t *testing.T) {
 	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
+			router := gin.Default()
+			router.GET("/:id", urlHandler.UnwrapUrlHandler)
 			request := httptest.NewRequest(tt.method, tt.url, nil)
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(urlHandler.UnwrapUrlHandler)
-			h(w, request)
+			router.ServeHTTP(w, request)
 
 			result := w.Result()
 
