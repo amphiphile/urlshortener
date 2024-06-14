@@ -6,37 +6,37 @@ import (
 )
 
 type Config struct {
-	ServerUrlConfig ServerUrlConfig
+	ServerURLConfig ServerURLConfig
 	AppConfig       AppConfig
 	DBConfig        DBConfig
 }
 
-type ServerUrlConfig struct {
+type ServerURLConfig struct {
 	ServerAddress string
 }
 
 type AppConfig struct {
-	BaseUrl string
+	BaseURL string
 }
 type DBConfig struct {
 	DBFileName string
 }
 
-func (c *ServerUrlConfig) String() string {
+func (c *ServerURLConfig) String() string {
 	return fmt.Sprintf(c.ServerAddress)
 
 }
-func (c *ServerUrlConfig) Set(flagValue string) error {
+func (c *ServerURLConfig) Set(flagValue string) error {
 	c.ServerAddress = flagValue
 	return nil
 }
 
 func (c *AppConfig) String() string {
-	return fmt.Sprintf(c.BaseUrl)
+	return fmt.Sprintf(c.BaseURL)
 
 }
 func (c *AppConfig) Set(flagValue string) error {
-	c.BaseUrl = flagValue
+	c.BaseURL = flagValue
 	return nil
 }
 

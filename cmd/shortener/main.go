@@ -13,36 +13,36 @@ func main() {
 	cfg := new(config.Config)
 	cfg.DBConfig.DBFileName = "db.json"
 
-	flag.Var(&cfg.ServerUrlConfig, "a", "HTTP server startup address")
+	flag.Var(&cfg.ServerURLConfig, "a", "HTTP server startup address")
 	flag.Var(&cfg.AppConfig, "b", "Base address of the shortened URL")
 
 	flag.Parse()
 
-	if serverAddress := cfg.ServerUrlConfig.String(); serverAddress == "" {
-		_ = cfg.ServerUrlConfig.Set(config.GetFromEnv("SERVER_ADDRESS", "localhost:8080"))
+	if serverAddress := cfg.ServerURLConfig.String(); serverAddress == "" {
+		_ = cfg.ServerURLConfig.Set(config.GetFromEnv("SERVER_ADDRESS", "localhost:8080"))
 
 	}
-	if baseUrl := cfg.AppConfig.String(); baseUrl == "" {
+	if baseURL := cfg.AppConfig.String(); baseURL == "" {
 		_ = cfg.AppConfig.Set(config.GetFromEnv("BASE_URL", "http://localhost:8080/"))
 		if !strings.HasSuffix(cfg.AppConfig.String(), "/") {
 			_ = cfg.AppConfig.Set(cfg.AppConfig.String() + "/")
 		}
 	}
 
-	urlHandler := &app.UrlHandler{
-		BaseUrl: cfg.AppConfig.BaseUrl,
-		Storage: &app.UrlStorage{
+	urlHandler := &app.URLHandler{
+		BaseURL: cfg.AppConfig.BaseURL,
+		Storage: &app.URLStorage{
 			DBFileName: cfg.DBConfig.DBFileName,
 		},
 	}
 
 	router := gin.Default()
 
-	router.POST("/", urlHandler.ShrinkUrlTextHandler)
-	router.POST("/api/shorten", urlHandler.ShrinkUrlJsonHandler)
-	router.GET("/:id", urlHandler.UnwrapUrlHandler)
+	router.POST("/", urlHandler.ShrinkURLTextHandler)
+	router.POST("/api/shorten", urlHandler.ShrinkURLJsonHandler)
+	router.GET("/:id", urlHandler.UnwrapURLHandler)
 
-	err := router.Run(cfg.ServerUrlConfig.String())
+	err := router.Run(cfg.ServerURLConfig.String())
 	if err != nil {
 		panic(err)
 	}

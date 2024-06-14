@@ -16,18 +16,18 @@ import (
 )
 
 var (
-	originalUrl = "https://test.ru"
-	shortUrlId  string
+	originalURL = "https://test.ru"
+	shortURLId  string
 )
 
-var urlHandler = &UrlHandler{
-	BaseUrl: "http://localhost:8080/",
-	Storage: &UrlStorage{
+var urlHandler = &URLHandler{
+	BaseURL: "http://localhost:8080/",
+	Storage: &URLStorage{
 		DBFileName: "db.json",
 	},
 }
 
-func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
+func TestURLHandler_shrinkURLHandler(t *testing.T) {
 
 	type want struct {
 		statusCode  int
@@ -38,7 +38,7 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 		name        string
 		url         string
 		method      string
-		originalUrl string
+		originalURL string
 		contentType string
 		want        want
 	}{
@@ -46,7 +46,7 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 			name:        "post test #1: good text/plain",
 			url:         "/",
 			method:      http.MethodPost,
-			originalUrl: originalUrl,
+			originalURL: originalURL,
 			contentType: "text/plain",
 			want: want{
 				statusCode:  http.StatusCreated,
@@ -57,7 +57,7 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 			name:        "post test #2: good application/json",
 			url:         "/api/shorten",
 			method:      http.MethodPost,
-			originalUrl: originalUrl,
+			originalURL: originalURL,
 			contentType: "application/json",
 			want: want{
 				statusCode:  http.StatusCreated,
@@ -68,7 +68,7 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 			name:        "post test #3: bad request url",
 			url:         "/bad/bad",
 			method:      http.MethodPost,
-			originalUrl: originalUrl,
+			originalURL: originalURL,
 			contentType: "application/json",
 			want: want{
 				statusCode: http.StatusNotFound,
@@ -82,10 +82,10 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 
 			if tt.contentType == "application/json" {
 
-				router.POST("/api/shorten", urlHandler.ShrinkUrlJsonHandler)
+				router.POST("/api/shorten", urlHandler.ShrinkURLJsonHandler)
 
 				requestBody, _ := json.Marshal(shrinkRequest{
-					Url: tt.originalUrl,
+					URL: tt.originalURL,
 				})
 
 				request := httptest.NewRequest(tt.method, tt.url, bytes.NewReader(requestBody))
@@ -93,16 +93,12 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 				w := httptest.NewRecorder()
 				router.ServeHTTP(w, request)
 				response := w.Result()
+				defer response.Body.Close()
 
 				assert.Equal(t, tt.want.statusCode, response.StatusCode)
 
 				if response.StatusCode == http.StatusCreated {
 					assert.True(t, strings.HasPrefix(response.Header.Get("Content-Type"), tt.want.contentType)) //FIXME: charset
-
-					defer func(Body io.ReadCloser) {
-						err := Body.Close()
-						require.NoError(t, err)
-					}(response.Body)
 
 					responseBody, err := io.ReadAll(response.Body)
 					require.NoError(t, err)
@@ -115,12 +111,12 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 					_, urlParseErr := url.Parse(responseData.Result)
 					require.NoError(t, urlParseErr)
 
-					shortUrlId = path.Base(responseData.Result) //FIXME: вызывать тесты последовательно
+					shortURLId = path.Base(responseData.Result) //FIXME: вызывать тесты последовательно
 				}
 			} else if tt.contentType == "text/plain" {
-				router.POST("/", urlHandler.ShrinkUrlTextHandler)
+				router.POST("/", urlHandler.ShrinkURLTextHandler)
 
-				requestBody := tt.originalUrl
+				requestBody := tt.originalURL
 
 				request := httptest.NewRequest(tt.method, tt.url, strings.NewReader(requestBody))
 				request.Header.Set("Content-Type", tt.contentType)
@@ -129,6 +125,7 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 				router.ServeHTTP(w, request)
 
 				response := w.Result()
+				defer response.Body.Close()
 
 				assert.Equal(t, tt.want.statusCode, response.StatusCode)
 
@@ -152,7 +149,7 @@ func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 	}
 }
 
-func TestUrlHandler_unwrapUrlHandler(t *testing.T) {
+func TestURLHandler_unwrapURLHandler(t *testing.T) {
 
 	type want struct {
 		statusCode int
@@ -167,11 +164,11 @@ func TestUrlHandler_unwrapUrlHandler(t *testing.T) {
 	}{
 		{
 			name:   "get test #1: good",
-			url:    "/" + shortUrlId,
+			url:    "/" + shortURLId,
 			method: http.MethodGet,
 			want: want{
 				statusCode: http.StatusTemporaryRedirect,
-				location:   originalUrl,
+				location:   originalURL,
 			},
 		},
 		{
@@ -188,17 +185,18 @@ func TestUrlHandler_unwrapUrlHandler(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.Default()
-			router.GET("/:id", urlHandler.UnwrapUrlHandler)
+			router.GET("/:id", urlHandler.UnwrapURLHandler)
 			request := httptest.NewRequest(tt.method, tt.url, nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, request)
 
-			result := w.Result()
+			response := w.Result()
+			defer response.Body.Close()
 
-			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+			assert.Equal(t, tt.want.statusCode, response.StatusCode)
 
-			if result.StatusCode == http.StatusTemporaryRedirect {
-				assert.Equal(t, tt.want.location, result.Header.Get("Location"))
+			if response.StatusCode == http.StatusTemporaryRedirect {
+				assert.Equal(t, tt.want.location, response.Header.Get("Location"))
 			}
 		})
 	}

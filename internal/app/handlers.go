@@ -11,24 +11,24 @@ import (
 	"strings"
 )
 
-type UrlShrinkerUnwrapper interface {
-	ShrinkUrl(url string) (string, error)
-	UnwrapUrl(id string) (string, error)
+type URLShrinkerUnwrapper interface {
+	ShrinkURL(url string) (string, error)
+	UnwrapURL(id string) (string, error)
 }
 
-type UrlHandler struct {
-	BaseUrl string
-	Storage UrlShrinkerUnwrapper
+type URLHandler struct {
+	BaseURL string
+	Storage URLShrinkerUnwrapper
 }
 
 type shrinkRequest struct {
-	Url string `json:"url"`
+	URL string `json:"url"`
 }
 type shrinkResult struct {
 	Result string `json:"result"`
 }
 
-func (h *UrlHandler) ShrinkUrlJsonHandler(c *gin.Context) {
+func (h *URLHandler) ShrinkURLJsonHandler(c *gin.Context) {
 	contentType := c.Request.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "application/json") { //FIXME: charset
 
@@ -37,11 +37,11 @@ func (h *UrlHandler) ShrinkUrlJsonHandler(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		originalUrl := request.Url
-		id, _ := h.Storage.ShrinkUrl(originalUrl)
+		originalURL := request.URL
+		id, _ := h.Storage.ShrinkURL(originalURL)
 
 		response := shrinkResult{
-			Result: h.BaseUrl + id,
+			Result: h.BaseURL + id,
 		}
 		c.JSON(http.StatusCreated, response)
 	} else {
@@ -51,19 +51,18 @@ func (h *UrlHandler) ShrinkUrlJsonHandler(c *gin.Context) {
 
 }
 
-func (h *UrlHandler) ShrinkUrlTextHandler(c *gin.Context) {
+func (h *URLHandler) ShrinkURLTextHandler(c *gin.Context) {
 	contentType := c.Request.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "text/plain") { //FIXME: charset
-
 		body, err := io.ReadAll(c.Request.Body)
 		if err != nil {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
-		originalUrl := string(body[:])
-		id, _ := h.Storage.ShrinkUrl(originalUrl)
+		originalURL := string(body[:])
+		id, _ := h.Storage.ShrinkURL(originalURL)
 
-		c.String(http.StatusCreated, h.BaseUrl+id)
+		c.String(http.StatusCreated, h.BaseURL+id)
 
 	} else {
 		c.String(http.StatusBadRequest, fmt.Sprintf("Unsupported content type: %s", contentType))
@@ -72,24 +71,24 @@ func (h *UrlHandler) ShrinkUrlTextHandler(c *gin.Context) {
 
 }
 
-func (h *UrlHandler) UnwrapUrlHandler(c *gin.Context) {
+func (h *URLHandler) UnwrapURLHandler(c *gin.Context) {
 	id := c.Param("id")
-	originalUrl, err := h.Storage.UnwrapUrl(id)
+	originalURL, err := h.Storage.UnwrapURL(id)
 	if err != nil {
 		http.Error(c.Writer, "Requested url not found", http.StatusBadRequest)
 		return
 	}
-	c.Writer.Header().Set("Location", originalUrl)
+	c.Writer.Header().Set("Location", originalURL)
 	c.Writer.WriteHeader(http.StatusTemporaryRedirect)
 
 }
 
-type UrlStorage struct {
+type URLStorage struct {
 	DBFileName string
 }
 type urlsMap map[string]string
 
-func (u *UrlStorage) ShrinkUrl(url string) (string, error) {
+func (u *URLStorage) ShrinkURL(url string) (string, error) {
 	urls, _ := u.readFromDB()
 
 	id := encode(url)
@@ -103,7 +102,7 @@ func (u *UrlStorage) ShrinkUrl(url string) (string, error) {
 	return id, nil
 }
 
-func (u *UrlStorage) UnwrapUrl(id string) (string, error) {
+func (u *URLStorage) UnwrapURL(id string) (string, error) {
 	urls, _ := u.readFromDB()
 
 	url, ok := urls[id]
@@ -113,7 +112,7 @@ func (u *UrlStorage) UnwrapUrl(id string) (string, error) {
 	return url, nil
 }
 
-func (u *UrlStorage) readFromDB() (urlsMap, error) {
+func (u *URLStorage) readFromDB() (urlsMap, error) {
 
 	urls := make(urlsMap)
 
@@ -137,7 +136,7 @@ func (u *UrlStorage) readFromDB() (urlsMap, error) {
 
 	return urls, nil
 }
-func (u *UrlStorage) writeToDB(urls urlsMap) error {
+func (u *URLStorage) writeToDB(urls urlsMap) error {
 
 	urlsJson, err := json.Marshal(urls)
 	if err != nil {
