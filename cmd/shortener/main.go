@@ -5,7 +5,6 @@ import (
 	"github.com/amphiphile/urlshrtnr/internal/app"
 	"github.com/amphiphile/urlshrtnr/internal/config"
 	"github.com/gin-gonic/gin"
-	"strings"
 )
 
 func main() {
@@ -24,15 +23,13 @@ func main() {
 	}
 	if baseURL := cfg.AppConfig.String(); baseURL == "" {
 		_ = cfg.AppConfig.Set(config.GetFromEnv("BASE_URL", "http://localhost:8080/"))
-		if !strings.HasSuffix(cfg.AppConfig.String(), "/") {
-			_ = cfg.AppConfig.Set(cfg.AppConfig.String() + "/")
-		}
 	}
 
 	urlHandler := &app.URLHandler{
 		BaseURL: cfg.AppConfig.BaseURL,
 		Storage: &app.URLStorage{
 			DBFileName: cfg.DBConfig.DBFileName,
+			BaseURL:    cfg.AppConfig.BaseURL,
 		},
 	}
 

@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -37,13 +38,11 @@ func (h *URLHandler) ShrinkURLJSONHandler(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		originalURL := request.URL
-		id, _ := h.Storage.ShrinkURL(originalURL)
+		result, _ := h.Storage.ShrinkURL(request.URL)
 
-		response := shrinkResult{
-			Result: h.BaseURL + id,
-		}
-		c.JSON(http.StatusCreated, response)
+		c.JSON(http.StatusCreated, shrinkResult{
+			Result: result,
+		})
 	} else {
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Unsupported content type: %s", contentType)})
 		return
@@ -59,10 +58,9 @@ func (h *URLHandler) ShrinkURLTextHandler(c *gin.Context) {
 			c.String(http.StatusBadRequest, err.Error())
 			return
 		}
-		originalURL := string(body[:])
-		id, _ := h.Storage.ShrinkURL(originalURL)
+		result, _ := h.Storage.ShrinkURL(string(body[:]))
 
-		c.String(http.StatusCreated, h.BaseURL+id)
+		c.String(http.StatusCreated, result)
 
 	} else {
 		c.String(http.StatusBadRequest, fmt.Sprintf("Unsupported content type: %s", contentType))
@@ -85,21 +83,24 @@ func (h *URLHandler) UnwrapURLHandler(c *gin.Context) {
 
 type URLStorage struct {
 	DBFileName string
+	BaseURL    string
 }
 type urlsMap map[string]string
 
-func (u *URLStorage) ShrinkURL(url string) (string, error) {
+func (u *URLStorage) ShrinkURL(originalUrl string) (string, error) {
 	urls, _ := u.readFromDB()
 
-	id := encode(url)
-	urls[id] = url
+	id := encode(originalUrl)
+	urls[id] = originalUrl
 
 	err := u.writeToDB(urls)
 	if err != nil {
 		panic(err)
 	}
 
-	return id, nil
+	result, err := url.JoinPath(u.BaseURL, id)
+
+	return result, nil
 }
 
 func (u *URLStorage) UnwrapURL(id string) (string, error) {
