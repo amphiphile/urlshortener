@@ -39,7 +39,7 @@ func main() {
 	router := gin.Default()
 
 	router.POST("/", urlHandler.ShrinkURLTextHandler)
-	router.POST("/api/shorten", urlHandler.ShrinkURLJsonHandler)
+	router.POST("/api/shorten", urlHandler.ShrinkURLJSONHandler)
 	router.GET("/:id", urlHandler.UnwrapURLHandler)
 
 	err := router.Run(cfg.ServerURLConfig.String())

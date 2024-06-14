@@ -82,7 +82,7 @@ func TestURLHandler_shrinkURLHandler(t *testing.T) {
 
 			if tt.contentType == "application/json" {
 
-				router.POST("/api/shorten", urlHandler.ShrinkURLJsonHandler)
+				router.POST("/api/shorten", urlHandler.ShrinkURLJSONHandler)
 
 				requestBody, _ := json.Marshal(shrinkRequest{
 					URL: tt.originalURL,

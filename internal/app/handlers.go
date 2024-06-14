@@ -28,7 +28,7 @@ type shrinkResult struct {
 	Result string `json:"result"`
 }
 
-func (h *URLHandler) ShrinkURLJsonHandler(c *gin.Context) {
+func (h *URLHandler) ShrinkURLJSONHandler(c *gin.Context) {
 	contentType := c.Request.Header.Get("Content-Type")
 	if strings.HasPrefix(contentType, "application/json") { //FIXME: charset
 
@@ -138,12 +138,12 @@ func (u *URLStorage) readFromDB() (urlsMap, error) {
 }
 func (u *URLStorage) writeToDB(urls urlsMap) error {
 
-	urlsJson, err := json.Marshal(urls)
+	urlsJSON, err := json.Marshal(urls)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(u.DBFileName, urlsJson, 0644)
+	err = os.WriteFile(u.DBFileName, urlsJSON, 0644)
 
 	if err != nil {
 		return err
