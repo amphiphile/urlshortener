@@ -1,59 +1,48 @@
 package config
 
 import (
-	"errors"
 	"fmt"
-	"strconv"
-	"strings"
+	"os"
 )
 
 type Config struct {
 	ServerUrlConfig ServerUrlConfig
 	AppConfig       AppConfig
-	DBFileName      string
+	DBConfig        DBConfig
 }
 
 type ServerUrlConfig struct {
-	ServerHost string
-	ServerPort int
+	ServerAddress string
 }
 
 type AppConfig struct {
 	BaseUrl string
 }
+type DBConfig struct {
+	DBFileName string
+}
 
-func (c ServerUrlConfig) String() string {
-	return fmt.Sprintf("%s:%d", c.ServerHost, c.ServerPort)
+func (c *ServerUrlConfig) String() string {
+	return fmt.Sprintf(c.ServerAddress)
 
 }
-func (c ServerUrlConfig) Set(flagValue string) error {
-	if flagValue == "" {
-		flagValue = "localhost:8080"
-	}
-	hp := strings.Split(flagValue, ":")
-	if len(hp) != 2 {
-		return errors.New("need address in a form host:port")
-	}
-	port, err := strconv.Atoi(hp[1])
-	if err != nil {
-		return err
-	}
-	c.ServerHost = hp[0]
-	c.ServerPort = port
+func (c *ServerUrlConfig) Set(flagValue string) error {
+	c.ServerAddress = flagValue
 	return nil
 }
 
-func (c AppConfig) String() string {
+func (c *AppConfig) String() string {
 	return fmt.Sprintf(c.BaseUrl)
 
 }
-func (c AppConfig) Set(flagValue string) error {
-	if flagValue == "" {
-		flagValue = "http://localhost:8080/"
-	}
-	if !strings.HasSuffix(flagValue, "/") {
-		flagValue += "/"
-	}
+func (c *AppConfig) Set(flagValue string) error {
 	c.BaseUrl = flagValue
 	return nil
+}
+
+func GetFromEnv(variable string, defaultValue string) string {
+	if value, exists := os.LookupEnv(variable); exists {
+		return value
+	}
+	return defaultValue
 }
