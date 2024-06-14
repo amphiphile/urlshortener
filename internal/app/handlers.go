@@ -3,10 +3,12 @@ package app
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type UrlShrinkerUnwrapper interface {
@@ -15,32 +17,56 @@ type UrlShrinkerUnwrapper interface {
 }
 
 type UrlHandler struct {
+	BaseUrl string
 	Storage UrlShrinkerUnwrapper
 }
 
-func (h *UrlHandler) ShrinkUrlHandler(c *gin.Context) {
-	if c.Request.URL.Path != "/" {
-		http.Error(c.Writer, "Bad request", http.StatusBadRequest)
+type shrinkRequest struct {
+	Url string `json:"url"`
+}
+type shrinkResult struct {
+	Result string `json:"result"`
+}
+
+func (h *UrlHandler) ShrinkUrlJsonHandler(c *gin.Context) {
+	contentType := c.Request.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "application/json") { //FIXME: charset
+
+		var request shrinkRequest
+		if err := c.ShouldBindJSON(&request); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		originalUrl := request.Url
+		id, _ := h.Storage.ShrinkUrl(originalUrl)
+
+		response := shrinkResult{
+			Result: h.BaseUrl + id,
+		}
+		c.JSON(http.StatusCreated, response)
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Unsupported content type: %s", contentType)})
 		return
 	}
-	body, err := io.ReadAll(c.Request.Body)
-	if err != nil {
-		http.Error(c.Writer, "Bad request", http.StatusBadRequest)
-		return
-	}
-	originalUrl := string(body[:])
-	id, _ := h.Storage.ShrinkUrl(originalUrl)
 
-	c.Writer.Header().Set("content-type", "text/plain")
-	c.Writer.WriteHeader(http.StatusCreated)
+}
 
-	scheme := "http"
-	if c.Request.TLS != nil {
-		scheme = "https"
-	}
-	_, err = c.Writer.Write([]byte(scheme + "://" + c.Request.Host + c.Request.URL.Path + id))
-	if err != nil {
-		http.Error(c.Writer, "Bad request", http.StatusBadRequest)
+func (h *UrlHandler) ShrinkUrlTextHandler(c *gin.Context) {
+	contentType := c.Request.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "text/plain") { //FIXME: charset
+
+		body, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.String(http.StatusBadRequest, err.Error())
+			return
+		}
+		originalUrl := string(body[:])
+		id, _ := h.Storage.ShrinkUrl(originalUrl)
+
+		c.String(http.StatusCreated, h.BaseUrl+id)
+
+	} else {
+		c.String(http.StatusBadRequest, fmt.Sprintf("Unsupported content type: %s", contentType))
 		return
 	}
 

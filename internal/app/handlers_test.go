@@ -1,6 +1,8 @@
 package app
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,72 +21,132 @@ var (
 )
 
 var urlHandler = &UrlHandler{
+	BaseUrl: "http://localhost:8080/",
 	Storage: &UrlStorage{
-		DBFileName: "db_test.json",
+		DBFileName: "db.json",
 	},
 }
 
 func TestUrlHandler_shrinkUrlHandler(t *testing.T) {
 
 	type want struct {
-		statusCode   int
-		contentType  string
-		isCorrectUrl bool
+		statusCode  int
+		contentType string
 	}
 
 	tests := []struct {
 		name        string
 		url         string
 		method      string
-		requestBody string
+		originalUrl string
+		contentType string
 		want        want
 	}{
 		{
-			name:        "post test #1: good",
+			name:        "post test #1: good text/plain",
 			url:         "/",
 			method:      http.MethodPost,
-			requestBody: originalUrl,
+			originalUrl: originalUrl,
+			contentType: "text/plain",
 			want: want{
-				statusCode:   http.StatusCreated,
-				contentType:  "text/plain",
-				isCorrectUrl: true,
+				statusCode:  http.StatusCreated,
+				contentType: "text/plain",
 			},
 		},
 		{
-			name:        "post test #2: bad request url",
+			name:        "post test #2: good application/json",
+			url:         "/api/shorten",
+			method:      http.MethodPost,
+			originalUrl: originalUrl,
+			contentType: "application/json",
+			want: want{
+				statusCode:  http.StatusCreated,
+				contentType: "application/json",
+			},
+		},
+		{
+			name:        "post test #3: bad request url",
 			url:         "/bad/bad",
 			method:      http.MethodPost,
-			requestBody: originalUrl,
+			originalUrl: originalUrl,
+			contentType: "application/json",
 			want: want{
 				statusCode: http.StatusNotFound,
 			},
 		},
 	}
-	for it, tt := range tests {
+	for _, tt := range tests {
 
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.Default()
-			router.POST("/", urlHandler.ShrinkUrlHandler)
-			request := httptest.NewRequest(tt.method, tt.url, strings.NewReader(tt.requestBody))
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, request)
 
-			result := w.Result()
+			if tt.contentType == "application/json" {
 
-			assert.Equal(t, tt.want.statusCode, result.StatusCode)
+				router.POST("/api/shorten", urlHandler.ShrinkUrlJsonHandler)
 
-			if result.StatusCode == http.StatusCreated {
-				assert.Equal(t, tt.want.contentType, result.Header.Get("Content-Type"))
-			}
-			defer result.Body.Close()
-			resBody, _ := io.ReadAll(result.Body)
+				requestBody, _ := json.Marshal(shrinkRequest{
+					Url: tt.originalUrl,
+				})
 
-			_, urlParseErr := url.Parse(string(resBody))
-			if tt.want.isCorrectUrl {
-				require.NoError(t, urlParseErr)
-				if it == 0 { //FIXME
-					shortUrlId = path.Base(string(resBody))
+				request := httptest.NewRequest(tt.method, tt.url, bytes.NewReader(requestBody))
+				request.Header.Set("Content-Type", tt.contentType)
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, request)
+				response := w.Result()
+
+				assert.Equal(t, tt.want.statusCode, response.StatusCode)
+
+				if response.StatusCode == http.StatusCreated {
+					assert.True(t, strings.HasPrefix(response.Header.Get("Content-Type"), tt.want.contentType)) //FIXME: charset
+
+					defer func(Body io.ReadCloser) {
+						err := Body.Close()
+						require.NoError(t, err)
+					}(response.Body)
+
+					responseBody, err := io.ReadAll(response.Body)
+					require.NoError(t, err)
+
+					var responseData shrinkResult
+
+					err = json.Unmarshal(responseBody, &responseData)
+					require.NoError(t, err)
+
+					_, urlParseErr := url.Parse(responseData.Result)
+					require.NoError(t, urlParseErr)
+
+					shortUrlId = path.Base(responseData.Result) //FIXME: вызывать тесты последовательно
 				}
+			} else if tt.contentType == "text/plain" {
+				router.POST("/", urlHandler.ShrinkUrlTextHandler)
+
+				requestBody := tt.originalUrl
+
+				request := httptest.NewRequest(tt.method, tt.url, strings.NewReader(requestBody))
+				request.Header.Set("Content-Type", tt.contentType)
+
+				w := httptest.NewRecorder()
+				router.ServeHTTP(w, request)
+
+				response := w.Result()
+
+				assert.Equal(t, tt.want.statusCode, response.StatusCode)
+
+				if response.StatusCode == http.StatusCreated {
+					assert.True(t, strings.HasPrefix(response.Header.Get("Content-Type"), tt.want.contentType)) //FIXME: charset
+
+					defer func(Body io.ReadCloser) {
+						err := Body.Close()
+						require.NoError(t, err)
+					}(response.Body)
+
+					resBody, err := io.ReadAll(response.Body)
+					require.NoError(t, err)
+
+					_, urlParseErr := url.Parse(string(resBody))
+					require.NoError(t, urlParseErr)
+				}
+
 			}
 		})
 	}
