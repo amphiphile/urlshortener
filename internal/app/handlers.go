@@ -87,18 +87,21 @@ type URLStorage struct {
 }
 type urlsMap map[string]string
 
-func (u *URLStorage) ShrinkURL(originalUrl string) (string, error) {
+func (u *URLStorage) ShrinkURL(originalURL string) (string, error) {
 	urls, _ := u.readFromDB()
 
-	id := encode(originalUrl)
-	urls[id] = originalUrl
+	id := encode(originalURL)
+	urls[id] = originalURL
 
 	err := u.writeToDB(urls)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
 
 	result, err := url.JoinPath(u.BaseURL, id)
+	if err != nil {
+		return "", err
+	}
 
 	return result, nil
 }
@@ -106,11 +109,11 @@ func (u *URLStorage) ShrinkURL(originalUrl string) (string, error) {
 func (u *URLStorage) UnwrapURL(id string) (string, error) {
 	urls, _ := u.readFromDB()
 
-	url, ok := urls[id]
+	originalURL, ok := urls[id]
 	if !ok {
 		return "", errors.New("URL not found")
 	}
-	return url, nil
+	return originalURL, nil
 }
 
 func (u *URLStorage) readFromDB() (urlsMap, error) {
