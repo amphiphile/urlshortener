@@ -2,8 +2,8 @@ package main
 
 import (
 	"flag"
-	"github.com/amphiphile/urlshrtnr/internal/app"
-	"github.com/amphiphile/urlshrtnr/internal/config"
+	"github.com/amphiphile/urlshortener/internal/app"
+	"github.com/amphiphile/urlshortener/internal/config"
 	"github.com/gin-gonic/gin"
 )
 

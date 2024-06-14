@@ -1,4 +1,4 @@
-module github.com/amphiphile/urlshrtnr
+module github.com/amphiphile/urlshortener
 
 go 1.22.4
 
