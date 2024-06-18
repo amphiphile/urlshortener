@@ -46,7 +46,6 @@ func (h *URLHandler) HandleShrinkURLJSON(c *gin.Context) {
 	c.JSON(http.StatusCreated, shrinkResult{
 		Result: result,
 	})
-	return
 
 }
 
@@ -76,7 +75,6 @@ func (h *URLHandler) HandleShrinkURLText(c *gin.Context) {
 	}
 
 	c.String(http.StatusCreated, result)
-	return
 
 }
 
@@ -140,10 +138,10 @@ func (u *URLStorage) readFromDB() (urlsMap, error) {
 	fileInfo, err := os.Stat(u.DBFileName)
 	if os.IsNotExist(err) {
 		f, err := os.Create(u.DBFileName)
-		defer f.Close()
 		if err != nil {
 			return urls, err
 		}
+		defer f.Close()
 		return urls, nil
 	} else if fileInfo.Size() == 0 {
 		return urls, nil
