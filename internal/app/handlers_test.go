@@ -21,8 +21,8 @@ var (
 )
 
 var urlHandler = &URLHandler{
-	BaseURL: "http://localhost:8080/",
 	Storage: &URLStorage{
+		BaseURL:    "http://localhost:8080/",
 		DBFileName: "db-test.json",
 	},
 }

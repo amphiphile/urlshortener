@@ -18,7 +18,6 @@ type URLShrinkerUnwrapper interface {
 }
 
 type URLHandler struct {
-	BaseURL string
 	Storage URLShrinkerUnwrapper
 }
 
@@ -95,8 +94,8 @@ type URLStorage struct {
 }
 type urlsMap map[string]string
 
-func (u *URLStorage) ShrinkURL(originalURL string) (string, error) {
-	urls, err := u.readFromDB()
+func (s *URLStorage) ShrinkURL(originalURL string) (string, error) {
+	urls, err := s.readFromDB()
 	if err != nil {
 		return "", err
 
@@ -105,12 +104,12 @@ func (u *URLStorage) ShrinkURL(originalURL string) (string, error) {
 	id := uuid.New().String()
 	urls[id] = originalURL
 
-	err = u.writeToDB(urls)
+	err = s.writeToDB(urls)
 	if err != nil {
 		return "", err
 	}
 
-	result, err := url.JoinPath(u.BaseURL, id)
+	result, err := url.JoinPath(s.BaseURL, id)
 	if err != nil {
 		return "", err
 	}
@@ -118,8 +117,8 @@ func (u *URLStorage) ShrinkURL(originalURL string) (string, error) {
 	return result, nil
 }
 
-func (u *URLStorage) UnwrapURL(id string) (string, error) {
-	urls, err := u.readFromDB()
+func (s *URLStorage) UnwrapURL(id string) (string, error) {
+	urls, err := s.readFromDB()
 	if err != nil {
 		return "", err
 	}
@@ -131,13 +130,13 @@ func (u *URLStorage) UnwrapURL(id string) (string, error) {
 	return originalURL, nil
 }
 
-func (u *URLStorage) readFromDB() (urlsMap, error) {
+func (s *URLStorage) readFromDB() (urlsMap, error) {
 
 	urls := make(urlsMap)
 
-	fileInfo, err := os.Stat(u.DBFileName)
+	fileInfo, err := os.Stat(s.DBFileName)
 	if os.IsNotExist(err) {
-		f, err := os.Create(u.DBFileName)
+		f, err := os.Create(s.DBFileName)
 		if err != nil {
 			return urls, err
 		}
@@ -146,7 +145,7 @@ func (u *URLStorage) readFromDB() (urlsMap, error) {
 	} else if fileInfo.Size() == 0 {
 		return urls, nil
 	} else {
-		urlsString, err := os.ReadFile(u.DBFileName)
+		urlsString, err := os.ReadFile(s.DBFileName)
 		if err != nil {
 			return urls, err
 		}
@@ -159,14 +158,14 @@ func (u *URLStorage) readFromDB() (urlsMap, error) {
 
 	return urls, nil
 }
-func (u *URLStorage) writeToDB(urls urlsMap) error {
+func (s *URLStorage) writeToDB(urls urlsMap) error {
 
 	urlsJSON, err := json.Marshal(urls)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(u.DBFileName, urlsJSON, 0644)
+	err = os.WriteFile(s.DBFileName, urlsJSON, 0644)
 
 	if err != nil {
 		return err
