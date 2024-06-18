@@ -24,7 +24,7 @@ type DBConfig struct {
 
 func parseConfig(cfg *Config) error {
 	flag.Var(&cfg.ServerURLConfig, "a", "HTTP server startup address")
-	flag.Var(&cfg.AppConfig, "b", "Base address of the shortened URL")
+	flag.Var(&cfg.AppConfig, "b", "Base address of the shorten URL")
 	flag.Parse()
 	if serverAddress := cfg.ServerURLConfig.String(); serverAddress == "" {
 		if err := cfg.ServerURLConfig.Set(GetFromEnv("SERVER_ADDRESS", "localhost:8080")); err != nil {

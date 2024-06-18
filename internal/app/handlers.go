@@ -21,16 +21,16 @@ type URLHandler struct {
 	Storage URLShrinkerUnwrapper
 }
 
-type shrinkRequest struct {
+type ShrinkRequest struct {
 	URL string `json:"url"`
 }
-type shrinkResult struct {
+type ShrinkResult struct {
 	Result string `json:"result"`
 }
 
 func (h *URLHandler) HandleShrinkURLJSON(c *gin.Context) {
 
-	var request shrinkRequest
+	var request ShrinkRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -42,7 +42,7 @@ func (h *URLHandler) HandleShrinkURLJSON(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, shrinkResult{
+	c.JSON(http.StatusCreated, ShrinkResult{
 		Result: result,
 	})
 
