@@ -23,11 +23,11 @@ var (
 var urlHandler = &URLHandler{
 	BaseURL: "http://localhost:8080/",
 	Storage: &URLStorage{
-		DBFileName: "db.json",
+		DBFileName: "db-test.json",
 	},
 }
 
-func TestURLHandler_shrinkURLHandler(t *testing.T) {
+func TestURLHandler_handleShrinkURL(t *testing.T) {
 
 	type want struct {
 		statusCode  int
@@ -82,7 +82,7 @@ func TestURLHandler_shrinkURLHandler(t *testing.T) {
 
 			if tt.contentType == "application/json" {
 
-				router.POST("/api/shorten", urlHandler.ShrinkURLJSONHandler)
+				router.POST("/api/shorten", urlHandler.HandleShrinkURLJSON)
 
 				requestBody, _ := json.Marshal(shrinkRequest{
 					URL: tt.originalURL,
@@ -114,7 +114,7 @@ func TestURLHandler_shrinkURLHandler(t *testing.T) {
 					shortURLId = path.Base(responseData.Result) //FIXME: вызывать тесты последовательно
 				}
 			} else if tt.contentType == "text/plain" {
-				router.POST("/", urlHandler.ShrinkURLTextHandler)
+				router.POST("/", urlHandler.HandleShrinkURLText)
 
 				requestBody := tt.originalURL
 
@@ -132,10 +132,7 @@ func TestURLHandler_shrinkURLHandler(t *testing.T) {
 				if response.StatusCode == http.StatusCreated {
 					assert.True(t, strings.HasPrefix(response.Header.Get("Content-Type"), tt.want.contentType)) //FIXME: charset
 
-					defer func(Body io.ReadCloser) {
-						err := Body.Close()
-						require.NoError(t, err)
-					}(response.Body)
+					defer response.Body.Close()
 
 					resBody, err := io.ReadAll(response.Body)
 					require.NoError(t, err)
@@ -149,7 +146,7 @@ func TestURLHandler_shrinkURLHandler(t *testing.T) {
 	}
 }
 
-func TestURLHandler_unwrapURLHandler(t *testing.T) {
+func TestURLHandler_handleUnwrapURL(t *testing.T) {
 
 	type want struct {
 		statusCode int
@@ -185,7 +182,7 @@ func TestURLHandler_unwrapURLHandler(t *testing.T) {
 
 		t.Run(tt.name, func(t *testing.T) {
 			router := gin.Default()
-			router.GET("/:id", urlHandler.UnwrapURLHandler)
+			router.GET("/:id", urlHandler.HandleUnwrapURL)
 			request := httptest.NewRequest(tt.method, tt.url, nil)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, request)

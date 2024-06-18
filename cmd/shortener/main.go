@@ -5,11 +5,13 @@ import (
 	"github.com/amphiphile/urlshortener/internal/app"
 	"github.com/amphiphile/urlshortener/internal/config"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
 func main() {
 
 	cfg := new(config.Config)
+
 	cfg.DBConfig.DBFileName = "db.json"
 
 	flag.Var(&cfg.ServerURLConfig, "a", "HTTP server startup address")
@@ -35,13 +37,13 @@ func main() {
 
 	router := gin.Default()
 
-	router.POST("/", urlHandler.ShrinkURLTextHandler)
-	router.POST("/api/shorten", urlHandler.ShrinkURLJSONHandler)
-	router.GET("/:id", urlHandler.UnwrapURLHandler)
+	router.POST("/", urlHandler.HandleShrinkURLText)
+	router.POST("/api/shorten", urlHandler.HandleShrinkURLJSON)
+	router.GET("/:id", urlHandler.HandleUnwrapURL)
 
 	err := router.Run(cfg.ServerURLConfig.String())
 	if err != nil {
-		panic(err)
+		log.Fatalf(err.Error())
 	}
 
 }
